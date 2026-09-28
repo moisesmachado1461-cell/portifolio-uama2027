@@ -1,0 +1,6 @@
+{
+  "name": "Retiro Anual de Mulheres UAMA",
+  "description": "Plataforma oficial do Retiro Anual de Mulheres UAMA: apresentação institucional, portal de inscrições e painel administrativo com gerenciamento de conteúdo e personalização de tema.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
