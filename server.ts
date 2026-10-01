@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import crypto from 'crypto';
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -30,6 +31,8 @@ import {
   createTestimonialItem,
   updateTestimonialItem,
   deleteTestimonialItem,
+  logAdminAudit,
+  listAdminAuditLogs,
 } from './server/db.js';
 import { pool } from './server/postgres.js';
 import { persistentRateLimit, requireSameOrigin } from './server/security.js';
@@ -201,6 +204,35 @@ app.use('/api/admin', async (req: Request, res: Response, next: NextFunction): P
     return;
   }
   await requireAdminAuth(req, res, next);
+});
+
+// Auditoria administrativa: registra a ação, mas nunca o corpo da requisição.
+app.use('/api/admin', (req: Request, res: Response, next: NextFunction) => {
+  const shouldAudit = !['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.path === '/check-auth';
+  if (!shouldAudit) { next(); return; }
+
+  res.on('finish', () => {
+    const ipHash = crypto.createHash('sha256').update(req.ip || 'unknown').digest('hex');
+    void logAdminAudit({
+      actor: 'admin',
+      action: `${req.method} ${req.path}`,
+      path: req.originalUrl.split('?')[0],
+      method: req.method,
+      statusCode: res.statusCode,
+      ipHash,
+    }).catch((error) => console.error('Falha ao gravar auditoria administrativa:', error));
+  });
+  next();
+});
+
+app.get('/api/admin/audit-logs', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const limit = typeof req.query.limit === 'string' ? Number(req.query.limit) : 100;
+    res.json(await listAdminAuditLogs(limit));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao carregar auditoria.' });
+  }
 });
 
 app.post('/api/admin/login', persistentRateLimit('admin-login', 5, 15 * 60), async (req: Request, res: Response): Promise<void> => {

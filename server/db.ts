@@ -114,6 +114,8 @@ export async function initDatabase(): Promise<void> {
       await client.query(`CREATE TABLE IF NOT EXISTS admin_sessions (token TEXT PRIMARY KEY, expires_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
       await client.query(`CREATE TABLE IF NOT EXISTS security_rate_limits (bucket_key TEXT PRIMARY KEY, count INTEGER NOT NULL DEFAULT 0, reset_at TIMESTAMPTZ NOT NULL)`);
       await client.query(`CREATE INDEX IF NOT EXISTS idx_security_rate_limits_reset_at ON security_rate_limits(reset_at)`);
+      await client.query(`CREATE TABLE IF NOT EXISTS admin_audit_logs (id BIGSERIAL PRIMARY KEY, actor TEXT NOT NULL DEFAULT 'admin', action TEXT NOT NULL, path TEXT NOT NULL, method TEXT NOT NULL, status_code INTEGER NOT NULL, ip_hash TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON admin_audit_logs(created_at DESC)`);
       await client.query(`CREATE TABLE IF NOT EXISTS registrations (id TEXT PRIMARY KEY, protocol TEXT UNIQUE NOT NULL, full_name TEXT NOT NULL, birth_date DATE NOT NULL, phone TEXT NOT NULL, address TEXT NOT NULL, rg TEXT NOT NULL, cpf TEXT NOT NULL, slipper_size TEXT NOT NULL, shirt_size TEXT NOT NULL, acknowledgement BOOLEAN NOT NULL DEFAULT FALSE, status TEXT NOT NULL DEFAULT 'pendente' CHECK (status IN ('pendente','confirmada','cancelada')), created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
       await client.query(`CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
       await client.query(`CREATE TABLE IF NOT EXISTS gallery (id TEXT PRIMARY KEY, url TEXT NOT NULL, title TEXT NOT NULL, category TEXT NOT NULL, is_featured BOOLEAN NOT NULL DEFAULT FALSE, sort_order INTEGER NOT NULL DEFAULT 0)`);
@@ -345,3 +347,31 @@ export async function updateTestimonialItem(id:string,updates:Partial<Testimonia
   await pool.query(`UPDATE testimonials SET name=$2,edition=$3,quote=$4,avatar_url=$5,is_active=$6,sort_order=$7 WHERE id=$1`,[id,item.name,item.edition,item.quote,item.avatarUrl ?? null,item.isActive,item.order]); return item;
 }
 export async function deleteTestimonialItem(id:string):Promise<boolean>{const r=await pool.query(`DELETE FROM testimonials WHERE id=$1`,[id]);return (r.rowCount??0)>0;}
+
+
+export interface AdminAuditInput {
+  actor?: string;
+  action: string;
+  path: string;
+  method: string;
+  statusCode: number;
+  ipHash?: string | null;
+}
+
+export async function logAdminAudit(input: AdminAuditInput): Promise<void> {
+  await initDatabase();
+  await pool.query(
+    `INSERT INTO admin_audit_logs (actor, action, path, method, status_code, ip_hash) VALUES ($1, $2, $3, $4, $5, $6)`,
+    [input.actor || 'admin', input.action, input.path, input.method, input.statusCode, input.ipHash || null]
+  );
+}
+
+export async function listAdminAuditLogs(limit = 100): Promise<any[]> {
+  await initDatabase();
+  const safeLimit = Math.max(1, Math.min(500, Number(limit) || 100));
+  const result = await pool.query(
+    `SELECT id, actor, action, path, method, status_code, created_at FROM admin_audit_logs ORDER BY created_at DESC LIMIT $1`,
+    [safeLimit]
+  );
+  return result.rows;
+}

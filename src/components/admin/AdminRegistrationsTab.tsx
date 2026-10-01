@@ -32,6 +32,25 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
   const [selectedReg, setSelectedReg] = useState<Registration | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Registration | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showSensitiveData, setShowSensitiveData] = useState(false);
+
+  const maskCpf = (cpf?: string) => {
+    const digits = (cpf || '').replace(/\D/g, '');
+    if (digits.length !== 11) return '***.***.***-**';
+    return `***.***.***-${digits.slice(-2)}`;
+  };
+
+  const maskRg = (rg?: string) => {
+    const value = (rg || '').trim();
+    if (!value) return 'Não informado';
+    return `${'*'.repeat(Math.max(5, value.length - 3))}${value.slice(-3)}`;
+  };
+
+  const maskAddress = (address?: string) => {
+    if (!address) return 'Não informado';
+    const first = address.split(',')[0]?.trim();
+    return first ? `${first}, ••••••` : '••••••';
+  };
 
   // Formata a data de nascimento sem problemas de fuso horário
   const formatBirthDate = (birthDate?: string) => {
@@ -93,6 +112,9 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
 
   // Exportar CSV
   const handleExportCSV = () => {
+    const confirmed = window.confirm('O CSV contém dados pessoais completos (CPF, RG, endereço e telefone). Exporte apenas quando necessário e mantenha o arquivo protegido.');
+    if (!confirmed) return;
+
     const headers = [
       'Protocolo',
       'Nome Completo',
@@ -316,7 +338,7 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
                       </td>
 
                       <td className="py-3 px-4 font-mono text-[var(--color-text-main)]">
-                        {reg.cpf}
+                        {maskCpf(reg.cpf)}
                       </td>
 
                       <td className="py-3 px-4 text-[var(--color-text-main)]">
@@ -388,7 +410,7 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
                         <div className="flex items-center justify-end gap-1">
 
                           <button
-                            onClick={() => setSelectedReg(reg)}
+                            onClick={() => { setShowSensitiveData(false); setSelectedReg(reg); }}
                             className="p-1.5 text-[var(--color-text-secondary)] hover:text-[var(--color-text-title)] hover:bg-[var(--color-bg-secondary)] rounded-lg"
                             title="Ver detalhes completos"
                           >
@@ -501,7 +523,7 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
                       </span>
 
                       <span className="font-mono text-[var(--color-text-main)]">
-                        {reg.cpf}
+                        {maskCpf(reg.cpf)}
                       </span>
                     </div>
 
@@ -538,7 +560,7 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
                     </button>
 
                     <button
-                      onClick={() => setSelectedReg(reg)}
+                      onClick={() => { setShowSensitiveData(false); setSelectedReg(reg); }}
                       className="py-1.5 px-3 rounded-lg text-xs font-semibold bg-[var(--color-card-bg)] text-[var(--color-text-main)] border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] flex items-center gap-1"
                     >
                       <Eye className="w-3.5 h-3.5" />
@@ -652,7 +674,7 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
                   </span>
 
                   <span className="font-mono font-medium">
-                    {selectedReg.cpf}
+                    {showSensitiveData ? selectedReg.cpf : maskCpf(selectedReg.cpf)}
                   </span>
                 </div>
 
@@ -662,7 +684,7 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
                   </span>
 
                   <span className="font-medium">
-                    {selectedReg.rg}
+                    {showSensitiveData ? selectedReg.rg : maskRg(selectedReg.rg)}
                   </span>
                 </div>
 
@@ -672,7 +694,7 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
                   </span>
 
                   <span className="font-medium">
-                    {selectedReg.address}
+                    {showSensitiveData ? selectedReg.address : maskAddress(selectedReg.address)}
                   </span>
                 </div>
 
@@ -730,6 +752,19 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
                 </span>
               </div>
 
+            </div>
+
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/40 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <p className="text-[11px] text-[var(--color-text-secondary)]">
+                CPF, RG e endereço ficam ocultos por padrão para reduzir exposição desnecessária de dados pessoais.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowSensitiveData((value) => !value)}
+                className="px-3 py-2 rounded-lg text-xs font-semibold border border-[var(--color-border)] bg-[var(--color-card-bg)] text-[var(--color-text-main)] hover:bg-[var(--color-bg-secondary)] whitespace-nowrap"
+              >
+                {showSensitiveData ? 'Ocultar dados' : 'Mostrar dados completos'}
+              </button>
             </div>
 
             <div className="pt-4 border-t border-[var(--color-border)] flex items-center justify-end gap-2">
