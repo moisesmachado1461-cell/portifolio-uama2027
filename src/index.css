@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-serif: 'Cormorant Garamond', Georgia, serif;
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+
+    /* Theme Tokens (customizable from admin panel) */
+    --color-primary: #78350f;
+    --color-secondary: #9a3412;
+    --color-accent: #b8860b;
+    --color-bg-main: #faf7f2;
+    --color-bg-secondary: #f4efea;
+    --color-text-title: #1c1917;
+    --color-text-main: #292524;
+    --color-text-secondary: #78716c;
+    --color-button-bg: #78350f;
+    --color-button-text: #ffffff;
+    --color-link: #9a3412;
+    --color-border: #e7e1d8;
+    --color-card-bg: #ffffff;
+    --color-card-border: #ebe5dc;
+    --color-form-focus: #b8860b;
+    --color-success: #166534;
+    --color-warning: #b45309;
+    --color-error: #991b1b;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-bg-main);
+    color: var(--color-text-main);
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1, h2, h3, .font-serif-display {
+    font-family: var(--font-serif);
+    text-wrap: balance;
+  }
+
+  /* Prevent iOS automatic zoom on focus by ensuring font-size is at least 16px on mobile viewports */
+  @media (max-width: 767px) {
+    input[type="text"],
+    input[type="tel"],
+    input[type="password"],
+    input[type="email"],
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
+  }
+}
+
+/* Custom smooth transitions for theme switches */
+* {
+  border-color: var(--color-border);
+}
+
+/* Responsive section offset for fixed navigation header */
+section[id] {
+  scroll-margin-top: 4.75rem;
+}
+
+@media (min-width: 640px) {
+  section[id] {
+    scroll-margin-top: 5.5rem;
+  }
+}
+
+/* Safe area insets for mobile notched devices (iPhone X/11/12/13/14/15/16, Android dynamic bar) */
+.safe-pb {
+  padding-bottom: max(0.85rem, env(safe-area-inset-bottom));
+}
+.safe-pt {
+  padding-top: max(0.85rem, env(safe-area-inset-top));
+}
+
+/* Custom horizontal scrollbar for mobile tabs */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Responsive touch target guarantee */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Responsive image containment */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
