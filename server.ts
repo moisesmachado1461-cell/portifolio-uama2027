@@ -32,6 +32,7 @@ import {
   deleteTestimonialItem,
 } from './server/db.js';
 import { pool } from './server/postgres.js';
+import { persistentRateLimit, requireSameOrigin } from './server/security.js';
 import { isValidCPF, isValidPhone } from './src/utils/validation.js';
 import { Registration } from './src/types/index.js';
 
@@ -95,26 +96,6 @@ app.use((req, res, next) => {
   next();
 });
 
-const rateBuckets = new Map<string, { count: number; resetAt: number }>();
-function rateLimit(max: number, windowMs: number) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const key = `${req.ip}:${req.path}`;
-    const now = Date.now();
-    const current = rateBuckets.get(key);
-    if (!current || current.resetAt <= now) {
-      rateBuckets.set(key, { count: 1, resetAt: now + windowMs });
-      next();
-      return;
-    }
-    if (current.count >= max) {
-      res.status(429).json({ error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' });
-      return;
-    }
-    current.count += 1;
-    next();
-  };
-}
-
 async function requireAdminAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const token = getCookie(req, ADMIN_SESSION_COOKIE);
@@ -149,7 +130,7 @@ app.get('/api/public-data', async (_req: Request, res: Response) => {
   }
 });
 
-app.post('/api/register', rateLimit(8, 15 * 60 * 1000), async (req: Request, res: Response): Promise<void> => {
+app.post('/api/register', persistentRateLimit('public-register', 8, 15 * 60), async (req: Request, res: Response): Promise<void> => {
   try {
     const { fullName, birthDate, phone, address, rg, cpf, slipperSize, shirtSize, acknowledgement } = req.body;
 
@@ -211,7 +192,18 @@ app.post('/api/register', rateLimit(8, 15 * 60 * 1000), async (req: Request, res
   }
 });
 
-app.post('/api/admin/login', rateLimit(5, 15 * 60 * 1000), async (req: Request, res: Response): Promise<void> => {
+
+// Proteção centralizada: toda a área administrativa passa pela mesma política.
+app.use('/api/admin', requireSameOrigin);
+app.use('/api/admin', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  if (req.path === '/login' || req.path === '/logout') {
+    next();
+    return;
+  }
+  await requireAdminAuth(req, res, next);
+});
+
+app.post('/api/admin/login', persistentRateLimit('admin-login', 5, 15 * 60), async (req: Request, res: Response): Promise<void> => {
   try {
     const { username, password } = req.body;
     if (!username || !password) { res.status(400).json({ error: 'Usuário e senha são obrigatórios.' }); return; }
@@ -241,15 +233,15 @@ app.post('/api/admin/logout', async (req: Request, res: Response): Promise<void>
   }
 });
 
-app.get('/api/admin/check-auth', requireAdminAuth, async (_req, res) => {
+app.get('/api/admin/check-auth', async (_req, res) => {
   res.json({ valid: true, username: await getAdminUsername() });
 });
 
-app.get('/api/admin/stats', requireAdminAuth, async (_req, res) => {
+app.get('/api/admin/stats', async (_req, res) => {
   try { res.json(await getStats()); } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao carregar estatísticas.' }); }
 });
 
-app.get('/api/admin/registrations', requireAdminAuth, async (req, res) => {
+app.get('/api/admin/registrations', async (req, res) => {
   try {
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
     const status = typeof req.query.status === 'string' ? req.query.status : '';
@@ -257,7 +249,7 @@ app.get('/api/admin/registrations', requireAdminAuth, async (req, res) => {
   } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao carregar inscrições.' }); }
 });
 
-app.patch('/api/admin/registrations/:id/status', requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
+app.patch('/api/admin/registrations/:id/status', async (req: Request, res: Response): Promise<void> => {
   try {
     const { status } = req.body;
     if (!['pendente', 'confirmada', 'cancelada'].includes(status)) { res.status(400).json({ error: 'Status inválido.' }); return; }
@@ -267,14 +259,14 @@ app.patch('/api/admin/registrations/:id/status', requireAdminAuth, async (req: R
   } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao atualizar inscrição.' }); }
 });
 
-app.delete('/api/admin/registrations/:id', requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
+app.delete('/api/admin/registrations/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     if (!(await deleteRegistration(req.params.id))) { res.status(404).json({ error: 'Inscrição não encontrada.' }); return; }
     res.json({ success: true, message: 'Inscrição excluída com sucesso.' });
   } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao excluir inscrição.' }); }
 });
 
-app.put('/api/admin/theme', requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
+app.put('/api/admin/theme', async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.body || typeof req.body !== 'object') { res.status(400).json({ error: 'Dados do tema inválidos.' }); return; }
     const theme = await updateTheme(req.body);
@@ -282,12 +274,12 @@ app.put('/api/admin/theme', requireAdminAuth, async (req: Request, res: Response
   } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao salvar tema.' }); }
 });
 
-app.post('/api/admin/theme/reset', requireAdminAuth, async (_req, res) => {
+app.post('/api/admin/theme/reset', async (_req, res) => {
   try { const theme = await resetTheme(); res.json({ success: true, theme }); }
   catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao restaurar tema.' }); }
 });
 
-app.put('/api/admin/event-info', requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
+app.put('/api/admin/event-info', async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.body || typeof req.body !== 'object') { res.status(400).json({ error: 'Dados do evento inválidos.' }); return; }
     const eventInfo = await updateEventInfo(req.body);
@@ -295,7 +287,7 @@ app.put('/api/admin/event-info', requireAdminAuth, async (req: Request, res: Res
   } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao salvar informações do evento.' }); }
 });
 
-app.post('/api/admin/gallery', requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
+app.post('/api/admin/gallery', async (req: Request, res: Response): Promise<void> => {
   try {
     const { url, title, category, isFeatured } = req.body;
     if (!url) { res.status(400).json({ error: 'URL ou imagem é obrigatória.' }); return; }
@@ -303,33 +295,33 @@ app.post('/api/admin/gallery', requireAdminAuth, async (req: Request, res: Respo
   } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao adicionar item à galeria.' }); }
 });
 
-app.put('/api/admin/gallery/:id', requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
+app.put('/api/admin/gallery/:id', async (req: Request, res: Response): Promise<void> => {
   try { const item = await updateGalleryItem(req.params.id, req.body); if (!item) { res.status(404).json({ error: 'Item da galeria não encontrado.' }); return; } res.json(item); }
   catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao atualizar galeria.' }); }
 });
-app.delete('/api/admin/gallery/:id', requireAdminAuth, async (req, res) => { try { await deleteGalleryItem(req.params.id); res.json({ success: true }); } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao excluir item.' }); } });
+app.delete('/api/admin/gallery/:id', async (req, res) => { try { await deleteGalleryItem(req.params.id); res.json({ success: true }); } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao excluir item.' }); } });
 
-app.post('/api/admin/videos', requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
+app.post('/api/admin/videos', async (req: Request, res: Response): Promise<void> => {
   try {
     const { title, description, embedUrl, thumbnailUrl, duration, isActive } = req.body;
     if (!title || !embedUrl) { res.status(400).json({ error: 'Título e URL do vídeo são obrigatórios.' }); return; }
     res.status(201).json(await createVideoItem({ title, description: description || '', embedUrl, thumbnailUrl: thumbnailUrl || '', duration: duration || '03:00', isActive: isActive !== false }));
   } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao adicionar vídeo.' }); }
 });
-app.put('/api/admin/videos/:id', requireAdminAuth, async (req: Request, res: Response): Promise<void> => { try { const item = await updateVideoItem(req.params.id, req.body); if (!item) { res.status(404).json({ error: 'Vídeo não encontrado.' }); return; } res.json(item); } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao atualizar vídeo.' }); } });
-app.delete('/api/admin/videos/:id', requireAdminAuth, async (req, res) => { try { await deleteVideoItem(req.params.id); res.json({ success: true }); } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao excluir vídeo.' }); } });
+app.put('/api/admin/videos/:id', async (req: Request, res: Response): Promise<void> => { try { const item = await updateVideoItem(req.params.id, req.body); if (!item) { res.status(404).json({ error: 'Vídeo não encontrado.' }); return; } res.json(item); } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao atualizar vídeo.' }); } });
+app.delete('/api/admin/videos/:id', async (req, res) => { try { await deleteVideoItem(req.params.id); res.json({ success: true }); } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao excluir vídeo.' }); } });
 
-app.post('/api/admin/testimonials', requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
+app.post('/api/admin/testimonials', async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, edition, quote, avatarUrl, isActive } = req.body;
     if (!name || !quote) { res.status(400).json({ error: 'Nome e depoimento são obrigatórios.' }); return; }
     res.status(201).json(await createTestimonialItem({ name, edition: edition || 'Participante', quote, avatarUrl: avatarUrl || '', isActive: isActive !== false }));
   } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao adicionar depoimento.' }); }
 });
-app.put('/api/admin/testimonials/:id', requireAdminAuth, async (req: Request, res: Response): Promise<void> => { try { const item = await updateTestimonialItem(req.params.id, req.body); if (!item) { res.status(404).json({ error: 'Depoimento não encontrado.' }); return; } res.json(item); } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao atualizar depoimento.' }); } });
-app.delete('/api/admin/testimonials/:id', requireAdminAuth, async (req, res) => { try { await deleteTestimonialItem(req.params.id); res.json({ success: true }); } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao excluir depoimento.' }); } });
+app.put('/api/admin/testimonials/:id', async (req: Request, res: Response): Promise<void> => { try { const item = await updateTestimonialItem(req.params.id, req.body); if (!item) { res.status(404).json({ error: 'Depoimento não encontrado.' }); return; } res.json(item); } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao atualizar depoimento.' }); } });
+app.delete('/api/admin/testimonials/:id', async (req, res) => { try { await deleteTestimonialItem(req.params.id); res.json({ success: true }); } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao excluir depoimento.' }); } });
 
-app.put('/api/admin/change-password', requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
+app.put('/api/admin/change-password', async (req: Request, res: Response): Promise<void> => {
   try {
     const { currentPassword, newPassword } = req.body;
     const username = await getAdminUsername();

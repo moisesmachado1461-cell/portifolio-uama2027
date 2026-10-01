@@ -112,6 +112,8 @@ export async function initDatabase(): Promise<void> {
       await client.query('BEGIN');
       await client.query(`CREATE TABLE IF NOT EXISTS admins (id SERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, salt TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
       await client.query(`CREATE TABLE IF NOT EXISTS admin_sessions (token TEXT PRIMARY KEY, expires_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+      await client.query(`CREATE TABLE IF NOT EXISTS security_rate_limits (bucket_key TEXT PRIMARY KEY, count INTEGER NOT NULL DEFAULT 0, reset_at TIMESTAMPTZ NOT NULL)`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_security_rate_limits_reset_at ON security_rate_limits(reset_at)`);
       await client.query(`CREATE TABLE IF NOT EXISTS registrations (id TEXT PRIMARY KEY, protocol TEXT UNIQUE NOT NULL, full_name TEXT NOT NULL, birth_date DATE NOT NULL, phone TEXT NOT NULL, address TEXT NOT NULL, rg TEXT NOT NULL, cpf TEXT NOT NULL, slipper_size TEXT NOT NULL, shirt_size TEXT NOT NULL, acknowledgement BOOLEAN NOT NULL DEFAULT FALSE, status TEXT NOT NULL DEFAULT 'pendente' CHECK (status IN ('pendente','confirmada','cancelada')), created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
       await client.query(`CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
       await client.query(`CREATE TABLE IF NOT EXISTS gallery (id TEXT PRIMARY KEY, url TEXT NOT NULL, title TEXT NOT NULL, category TEXT NOT NULL, is_featured BOOLEAN NOT NULL DEFAULT FALSE, sort_order INTEGER NOT NULL DEFAULT 0)`);
