@@ -41,17 +41,57 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const isProduction = process.env.NODE_ENV === 'production';
+const ADMIN_SESSION_COOKIE = 'uama_admin_session';
+const ADMIN_SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
+
+function getCookie(req: Request, name: string): string | undefined {
+  const raw = req.headers.cookie;
+  if (!raw) return undefined;
+  for (const part of raw.split(';')) {
+    const [key, ...value] = part.trim().split('=');
+    if (key === name) return decodeURIComponent(value.join('='));
+  }
+  return undefined;
+}
+
+function setAdminSessionCookie(res: Response, token: string): void {
+  const secure = isProduction ? '; Secure' : '';
+  res.setHeader(
+    'Set-Cookie',
+    `${ADMIN_SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/api/admin; HttpOnly; SameSite=Strict; Max-Age=${ADMIN_SESSION_MAX_AGE_SECONDS}${secure}`
+  );
+}
+
+function clearAdminSessionCookie(res: Response): void {
+  const secure = isProduction ? '; Secure' : '';
+  res.setHeader(
+    'Set-Cookie',
+    `${ADMIN_SESSION_COOKIE}=; Path=/api/admin; HttpOnly; SameSite=Strict; Max-Age=0${secure}`
+  );
+}
 
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
 app.disable('x-powered-by');
-app.use((_req, res, next) => {
+app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  if (req.path.startsWith('/api/admin')) {
+    res.setHeader('Cache-Control', 'no-store, private');
+  }
+  if (isProduction) {
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self'; frame-src https://www.youtube.com https://www.youtube-nocookie.com; form-action 'self'; upgrade-insecure-requests"
+    );
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
   next();
 });
 
@@ -77,14 +117,10 @@ function rateLimit(max: number, windowMs: number) {
 
 async function requireAdminAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ error: 'Acesso não autorizado. Faça login novamente.' });
-      return;
-    }
-    const token = authHeader.split(' ')[1];
-    if (!(await isValidSession(token))) {
-      res.status(401).json({ error: 'Sessão expirada ou inválida.' });
+    const token = getCookie(req, ADMIN_SESSION_COOKIE);
+    if (!token || !(await isValidSession(token))) {
+      clearAdminSessionCookie(res);
+      res.status(401).json({ error: 'Sessão expirada ou inválida. Faça login novamente.' });
       return;
     }
     next();
@@ -93,6 +129,7 @@ async function requireAdminAuth(req: Request, res: Response, next: NextFunction)
     res.status(500).json({ error: 'Falha ao validar a sessão.' });
   }
 }
+
 
 app.get('/api/health', async (_req, res) => {
   try {
@@ -180,7 +217,9 @@ app.post('/api/admin/login', rateLimit(5, 15 * 60 * 1000), async (req: Request, 
     if (!username || !password) { res.status(400).json({ error: 'Usuário e senha são obrigatórios.' }); return; }
     if (await verifyAdminCredentials(username.trim(), password)) {
       const token = await createAdminSession();
-      res.json({ success: true, token, username: username.trim() });
+      setAdminSessionCookie(res, token);
+      // O valor abaixo é apenas um marcador de interface; o segredo real fica em cookie HttpOnly.
+      res.json({ success: true, token: 'session-cookie', username: username.trim() });
     } else {
       res.status(401).json({ error: 'Credenciais inválidas. Verifique usuário e senha.' });
     }
@@ -192,15 +231,19 @@ app.post('/api/admin/login', rateLimit(5, 15 * 60 * 1000), async (req: Request, 
 
 app.post('/api/admin/logout', async (req: Request, res: Response): Promise<void> => {
   try {
-    const authHeader = req.headers.authorization;
-    if (authHeader?.startsWith('Bearer ')) await destroySession(authHeader.split(' ')[1]);
+    const token = getCookie(req, ADMIN_SESSION_COOKIE);
+    if (token) await destroySession(token);
+  } catch (error) {
+    console.error('Erro ao encerrar sessão:', error);
+  } finally {
+    clearAdminSessionCookie(res);
     res.json({ success: true, message: 'Sessão encerrada com sucesso.' });
-  } catch {
-    res.json({ success: true, message: 'Sessão encerrada.' });
   }
 });
 
-app.get('/api/admin/check-auth', requireAdminAuth, (_req, res) => res.json({ valid: true }));
+app.get('/api/admin/check-auth', requireAdminAuth, async (_req, res) => {
+  res.json({ valid: true, username: await getAdminUsername() });
+});
 
 app.get('/api/admin/stats', requireAdminAuth, async (_req, res) => {
   try { res.json(await getStats()); } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao carregar estatísticas.' }); }
@@ -293,6 +336,7 @@ app.put('/api/admin/change-password', requireAdminAuth, async (req: Request, res
     if (!(await verifyAdminCredentials(username, currentPassword))) { res.status(400).json({ error: 'A senha atual informada está incorreta.' }); return; }
     if (!newPassword || newPassword.length < 12) { res.status(400).json({ error: 'A nova senha deve ter no mínimo 12 caracteres.' }); return; }
     await updateAdminPassword(newPassword);
+    clearAdminSessionCookie(res);
     res.json({ success: true, message: 'Senha atualizada. Por segurança, faça login novamente.' });
   } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao alterar senha.' }); }
 });

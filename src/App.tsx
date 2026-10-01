@@ -40,9 +40,18 @@ export default function App() {
     checkAdminAuth();
   }, []);
 
-  const checkAdminAuth = () => {
-    const token = localStorage.getItem('uama_admin_token');
-    setHasAdminToken(!!token);
+  const checkAdminAuth = async () => {
+    try {
+      const res = await fetch('/api/admin/check-auth', { credentials: 'same-origin' });
+      const valid = res.ok;
+      setHasAdminToken(valid);
+      if (!valid) {
+        localStorage.removeItem('uama_admin_token');
+        localStorage.removeItem('uama_admin_user');
+      }
+    } catch {
+      setHasAdminToken(false);
+    }
   };
 
   const fetchPublicData = async () => {

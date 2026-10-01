@@ -70,8 +70,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
     try {
       const [statsRes, regsRes] = await Promise.all([
-        fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${savedToken}` } }),
-        fetch('/api/admin/registrations', { headers: { Authorization: `Bearer ${savedToken}` } }),
+        fetch('/api/admin/stats', { credentials: 'same-origin' }),
+        fetch('/api/admin/registrations', { credentials: 'same-origin' }),
       ]);
 
       if (statsRes.status === 401 || regsRes.status === 401) {
@@ -105,7 +105,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       try {
         await fetch('/api/admin/logout', {
           method: 'POST',
-          headers: { Authorization: `Bearer ${currentToken}` },
+          credentials: 'same-origin',
         });
       } catch {
         // Ignore network errors on logout
@@ -125,10 +125,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     try {
       const res = await fetch(`/api/admin/registrations/${id}/status`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${savedToken}`,
-        },
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
       if (res.ok) {
@@ -144,8 +142,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     if (!savedToken) return;
     try {
       const res = await fetch(`/api/admin/registrations/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${savedToken}` },
+          method: 'DELETE',
+          credentials: 'same-origin',
       });
       if (res.ok) {
         await fetchAdminData();
@@ -161,10 +159,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     try {
       const res = await fetch('/api/admin/event-info', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${savedToken}`,
-        },
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newInfo),
       });
       if (res.ok) {
@@ -183,10 +179,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     try {
       const res = await fetch('/api/admin/gallery', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${savedToken}`,
-        },
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(photo),
       });
       if (res.ok) {
@@ -203,8 +197,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     if (!savedToken) return;
     try {
       const res = await fetch(`/api/admin/gallery/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${savedToken}` },
+          method: 'DELETE',
+          credentials: 'same-origin',
       });
       if (res.ok) {
         await onRefreshPublicData();
@@ -221,10 +215,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     try {
       const res = await fetch('/api/admin/videos', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${savedToken}`,
-        },
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(video),
       });
       if (res.ok) {
@@ -241,8 +233,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     if (!savedToken) return;
     try {
       const res = await fetch(`/api/admin/videos/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${savedToken}` },
+          method: 'DELETE',
+          credentials: 'same-origin',
       });
       if (res.ok) {
         await onRefreshPublicData();
@@ -259,10 +251,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     try {
       const res = await fetch('/api/admin/testimonials', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${savedToken}`,
-        },
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(test),
       });
       if (res.ok) {
@@ -279,8 +269,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     if (!savedToken) return;
     try {
       const res = await fetch(`/api/admin/testimonials/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${savedToken}` },
+          method: 'DELETE',
+          credentials: 'same-origin',
       });
       if (res.ok) {
         await onRefreshPublicData();

@@ -325,7 +325,7 @@ export const ThemeProvider: React.FC<{
       try {
         await fetch('/api/admin/theme/reset', {
           method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: 'same-origin',
         });
       } catch (e) {
         console.error('Error resetting theme on server', e);
@@ -340,10 +340,8 @@ export const ThemeProvider: React.FC<{
     try {
       const res = await fetch('/api/admin/theme', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(theme),
       });
       setIsSaving(false);

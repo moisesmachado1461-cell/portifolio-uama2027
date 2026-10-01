@@ -22,14 +22,11 @@ export const AdminSecurityTab: React.FC = () => {
     setIsLoading(true);
     setMessage(null);
 
-    const token = localStorage.getItem('uama_admin_token');
     try {
       const res = await fetch('/api/admin/change-password', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPassword, newPassword }),
       });
 
@@ -37,7 +34,9 @@ export const AdminSecurityTab: React.FC = () => {
       if (!res.ok) {
         setMessage({ type: 'error', text: data.error || 'Erro ao alterar senha.' });
       } else {
-        setMessage({ type: 'success', text: 'Senha alterada com sucesso!' });
+        localStorage.removeItem('uama_admin_token');
+        localStorage.removeItem('uama_admin_user');
+        setMessage({ type: 'success', text: 'Senha alterada com sucesso. Faça login novamente.' });
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
