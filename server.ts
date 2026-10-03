@@ -47,6 +47,7 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 const isProduction = process.env.NODE_ENV === 'production';
 const ADMIN_SESSION_COOKIE = 'uama_admin_session';
 const ADMIN_SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
+const SERVER_STARTED_AT = Date.now();
 
 function getCookie(req: Request, name: string): string | undefined {
   const raw = req.headers.cookie;
@@ -77,6 +78,15 @@ function clearAdminSessionCookie(res: Response): void {
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+
+// ID de correlação para diagnosticar falhas sem expor dados pessoais.
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const incoming = req.header('x-request-id');
+  const requestId = incoming && /^[A-Za-z0-9._:-]{8,100}$/.test(incoming) ? incoming : crypto.randomUUID();
+  res.setHeader('X-Request-Id', requestId);
+  (req as Request & { requestId?: string }).requestId = requestId;
+  next();
+});
 
 app.disable('x-powered-by');
 app.use((req, res, next) => {
@@ -120,11 +130,33 @@ async function requireAdminAuth(req: Request, res: Response, next: NextFunction)
 
 
 app.get('/api/health', async (_req, res) => {
+  const started = Date.now();
   try {
     await pool.query('SELECT 1');
-    res.json({ status: 'ok', database: 'postgresql' });
-  } catch {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      status: 'ok',
+      database: 'postgresql',
+      dbLatencyMs: Date.now() - started,
+      uptimeSeconds: Math.floor((Date.now() - SERVER_STARTED_AT) / 1000),
+    });
+  } catch (error) {
+    console.error('Healthcheck: PostgreSQL indisponível:', error);
+    res.setHeader('Cache-Control', 'no-store');
     res.status(503).json({ status: 'error', database: 'unavailable' });
+  }
+});
+
+// Readiness: usado para saber se a aplicação está pronta para receber tráfego.
+app.get('/api/ready', async (_req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ ready: true });
+  } catch (error) {
+    console.error('Readiness: PostgreSQL indisponível:', error);
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(503).json({ ready: false });
   }
 });
 
@@ -383,6 +415,19 @@ app.put('/api/admin/change-password', async (req: Request, res: Response): Promi
   } catch (error) { console.error(error); res.status(500).json({ error: 'Erro ao alterar senha.' }); }
 });
 
+// Respostas previsíveis para APIs inexistentes, sem entregar detalhes internos.
+app.use('/api', (req: Request, res: Response) => {
+  res.status(404).json({ error: 'Endpoint não encontrado.' });
+});
+
+// Última barreira para erros não tratados nas rotas Express.
+app.use((error: unknown, req: Request, res: Response, _next: NextFunction) => {
+  const requestId = (req as Request & { requestId?: string }).requestId || 'unknown';
+  console.error(`[${requestId}] Erro não tratado:`, error);
+  if (res.headersSent) return;
+  res.status(500).json({ error: 'Erro interno do servidor.', requestId });
+});
+
 async function startServer() {
   await initDatabase();
 
@@ -415,6 +460,15 @@ async function startServer() {
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
 }
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
+  process.exit(1);
+});
 
 startServer().catch((error) => {
   console.error('Falha ao iniciar o servidor:', error);
