@@ -184,7 +184,18 @@ app.post('/api/register', persistentRateLimit('public-register', 8, 15 * 60), as
     };
 
     const saved = await createRegistration(newRegistration);
-    res.status(201).json({ success: true, message: 'Inscrição realizada com sucesso!', registration: saved });
+    res.setHeader('Cache-Control', 'no-store, private');
+    res.status(201).json({
+      success: true,
+      message: 'Inscrição realizada com sucesso!',
+      registration: {
+        id: saved.id,
+        protocol: saved.protocol,
+        fullName: saved.fullName,
+        status: saved.status,
+        createdAt: saved.createdAt,
+      },
+    });
   } catch (error: any) {
     if (error?.code === '23505') {
       res.status(409).json({ error: 'Já existe uma inscrição ativa para este CPF ou protocolo.' });

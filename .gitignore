@@ -6,4 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Banco local legado / dados pessoais
 data/database.json

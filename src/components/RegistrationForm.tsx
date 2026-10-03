@@ -13,8 +13,10 @@ import {
 import { isValidCPF, maskCPF, isValidPhone, maskPhone } from '../utils/validation.js';
 import { Registration } from '../types/index.js';
 
+type RegistrationReceipt = Pick<Registration, 'id' | 'protocol' | 'fullName' | 'status' | 'createdAt'>;
+
 interface RegistrationFormProps {
-  onSuccess?: (reg: Registration) => void;
+  onSuccess?: (reg: RegistrationReceipt) => void;
 }
 
 export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess }) => {
@@ -32,7 +34,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successRegistration, setSuccessRegistration] =
-    useState<Registration | null>(null);
+    useState<RegistrationReceipt | null>(null);
 
   const isNameValid = fullName.trim().length >= 3;
   const isBirthDateValid = /^\d{4}-\d{2}-\d{2}$/.test(birthDate);

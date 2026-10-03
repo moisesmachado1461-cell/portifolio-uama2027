@@ -69,6 +69,10 @@ function hashPassword(password: string, salt: string): string {
   return crypto.pbkdf2Sync(password, salt, 210000, 64, 'sha512').toString('hex');
 }
 
+function hashSessionToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
 function mapRegistration(row: any): Registration {
   return {
     id: row.id,
@@ -221,20 +225,20 @@ export async function createAdminSession(): Promise<string> {
   await initDatabase();
   await pool.query(`DELETE FROM admin_sessions WHERE expires_at <= NOW()`);
   const token = crypto.randomBytes(32).toString('hex');
-  await pool.query(`INSERT INTO admin_sessions (token, expires_at) VALUES ($1, NOW() + INTERVAL '8 hours')`, [token]);
+  await pool.query(`INSERT INTO admin_sessions (token, expires_at) VALUES ($1, NOW() + INTERVAL '8 hours')`, [hashSessionToken(token)]);
   return token;
 }
 
 export async function isValidSession(token?: string): Promise<boolean> {
   if (!token) return false;
   await initDatabase();
-  const result = await pool.query(`SELECT 1 FROM admin_sessions WHERE token = $1 AND expires_at > NOW() LIMIT 1`, [token]);
+  const result = await pool.query(`SELECT 1 FROM admin_sessions WHERE token = $1 AND expires_at > NOW() LIMIT 1`, [hashSessionToken(token)]);
   return result.rowCount === 1;
 }
 
 export async function destroySession(token: string): Promise<void> {
   await initDatabase();
-  await pool.query(`DELETE FROM admin_sessions WHERE token = $1`, [token]);
+  await pool.query(`DELETE FROM admin_sessions WHERE token = $1`, [hashSessionToken(token)]);
 }
 
 export async function updateAdminPassword(newPassword: string): Promise<void> {
