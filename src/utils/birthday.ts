@@ -1,28 +1,49 @@
-export function calculateAge(birthDate: string): number {
-  const birth = new Date(birthDate);
-  const today = new Date();
+function parseDateOnly(dateValue: string): { year: number; month: number; day: number } | null {
+  const value = (dateValue || '').trim();
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/.exec(value);
 
-  let age = today.getFullYear() - birth.getFullYear();
+  if (!match) return null;
 
-  const hasNotHadBirthday =
-    today.getMonth() < birth.getMonth() ||
-    (today.getMonth() === birth.getMonth() &&
-      today.getDate() < birth.getDate());
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
 
-  if (hasNotHadBirthday) {
-    age--;
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return null;
   }
 
-  return age;
+  if (month < 1 || month > 12 || day < 1 || day > 31) {
+    return null;
+  }
+
+  return { year, month, day };
 }
 
-export function isBirthdayToday(birthDate: string): boolean {
-  const birth = new Date(birthDate);
-  const today = new Date();
+export function calculateAge(birthDate: string, referenceDate: Date = new Date()): number {
+  const birth = parseDateOnly(birthDate);
+  if (!birth) return 0;
+
+  let age = referenceDate.getFullYear() - birth.year;
+
+  const currentMonth = referenceDate.getMonth() + 1;
+  const currentDay = referenceDate.getDate();
+
+  const hasNotHadBirthday =
+    currentMonth < birth.month ||
+    (currentMonth === birth.month && currentDay < birth.day);
+
+  if (hasNotHadBirthday) age--;
+
+  return Math.max(0, age);
+}
+
+export function isBirthdayToday(birthDate: string, referenceDate: Date = new Date()): boolean {
+  const birth = parseDateOnly(birthDate);
+  if (!birth) return false;
 
   return (
-    birth.getMonth() === today.getMonth() &&
-    birth.getDate() === today.getDate()
+    birth.month === referenceDate.getMonth() + 1 &&
+    birth.day === referenceDate.getDate()
   );
 }
 
