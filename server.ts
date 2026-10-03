@@ -89,6 +89,10 @@ app.use((req, res, next) => {
   if (req.path.startsWith('/api/admin')) {
     res.setHeader('Cache-Control', 'no-store, private');
   }
+  if (req.path === '/admin' || req.path.startsWith('/admin/')) {
+    res.setHeader('Cache-Control', 'no-store, private');
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  }
   if (isProduction) {
     res.setHeader(
       'Content-Security-Policy',

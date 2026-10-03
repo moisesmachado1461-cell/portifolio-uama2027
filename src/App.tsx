@@ -10,19 +10,27 @@ import { VideosSection } from './components/VideosSection.js';
 import { TestimonialsSection } from './components/TestimonialsSection.js';
 import { RegistrationForm } from './components/RegistrationForm.js';
 import { Footer } from './components/Footer.js';
-import { AdminModal } from './components/admin/AdminModal.js';
 import { OfficialFlyerModal } from './components/OfficialFlyerModal.js';
 import { MobileQuickBar } from './components/MobileQuickBar.js';
 import { ResponsivePreviewBar, DeviceMode } from './components/ResponsivePreviewBar.js';
-import { PublicData, EventInfo, GalleryItem, VideoItem, TestimonialItem } from './types/index.js';
+import { AdminPage } from './components/admin/AdminPage.js';
+import { PublicData } from './types/index.js';
 import { DEFAULT_THEME_CONFIG } from './context/ThemeContext.js';
 
 export default function App() {
+  const isAdminRoute = window.location.pathname === '/admin' || window.location.pathname.startsWith('/admin/');
+
+  if (isAdminRoute) {
+    return <AdminPage />;
+  }
+
+  return <PublicSite />;
+}
+
+function PublicSite() {
   const [publicData, setPublicData] = useState<PublicData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isFlyerModalOpen, setIsFlyerModalOpen] = useState(false);
-  const [hasAdminToken, setHasAdminToken] = useState(false);
   const [deviceMode, setDeviceMode] = useState<DeviceMode>('fluid');
   const [isPreviewBarOpen, setIsPreviewBarOpen] = useState(false);
 
@@ -37,22 +45,7 @@ export default function App() {
 
   useEffect(() => {
     fetchPublicData();
-    checkAdminAuth();
   }, []);
-
-  const checkAdminAuth = async () => {
-    try {
-      const res = await fetch('/api/admin/check-auth', { credentials: 'same-origin' });
-      const valid = res.ok;
-      setHasAdminToken(valid);
-      if (!valid) {
-        localStorage.removeItem('uama_admin_token');
-        localStorage.removeItem('uama_admin_user');
-      }
-    } catch {
-      setHasAdminToken(false);
-    }
-  };
 
   const fetchPublicData = async () => {
     try {
@@ -73,12 +66,8 @@ export default function App() {
       <div className="min-h-screen bg-[#FAF7F2] flex items-center justify-center p-4">
         <div className="text-center space-y-4 max-w-sm">
           <div className="w-12 h-12 rounded-full border-2 border-[#78350F] border-t-transparent animate-spin mx-auto" />
-          <h2 className="text-2xl font-serif font-bold text-[#1C1917]">
-            Retiro Anual de Mulheres UAMA
-          </h2>
-          <p className="text-xs text-[#78716C] uppercase tracking-widest font-medium">
-            Carregando ambiente de acolhimento...
-          </p>
+          <h2 className="text-2xl font-serif font-bold text-[#1C1917]">Retiro Anual de Mulheres UAMA</h2>
+          <p className="text-xs text-[#78716C] uppercase tracking-widest font-medium">Carregando ambiente de acolhimento...</p>
         </div>
       </div>
     );
@@ -86,14 +75,9 @@ export default function App() {
 
   return (
     <ThemeProvider initialTheme={publicData.theme || DEFAULT_THEME_CONFIG}>
-      <div
-        className={`min-h-screen flex flex-col bg-[var(--color-bg-main)] text-[var(--color-text-main)] transition-colors duration-300 ${
-          deviceMode !== 'fluid'
-            ? 'bg-stone-900/10 dark:bg-black/60 pt-12 pb-16 sm:px-4'
-            : ''
-        }`}
-      >
-        {/* Device preview toolbar for testing all resolutions on PC */}
+      <div className={`min-h-screen flex flex-col bg-[var(--color-bg-main)] text-[var(--color-text-main)] transition-colors duration-300 ${
+        deviceMode !== 'fluid' ? 'bg-stone-900/10 dark:bg-black/60 pt-12 pb-16 sm:px-4' : ''
+      }`}>
         <ResponsivePreviewBar
           currentMode={deviceMode}
           onChangeMode={(mode) => setDeviceMode(mode)}
@@ -101,78 +85,32 @@ export default function App() {
           onToggleOpen={() => setIsPreviewBarOpen(!isPreviewBarOpen)}
         />
 
-        {/* Responsive Frame (Fluid by default, or device viewport simulator) */}
-        <div
-          className={`${deviceWidthMap[deviceMode]} ${
-            deviceMode !== 'fluid'
-              ? 'mx-auto shadow-2xl rounded-2xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-bg-main)] relative ring-8 ring-stone-950/10'
-              : 'w-full'
-          } min-h-screen flex flex-col transition-all duration-300`}
-        >
-          {/* Navigation Bar */}
-          <Header
-            onOpenAdmin={() => setIsAdminOpen(true)}
-            isAdminLoggedIn={hasAdminToken}
-          />
+        <div className={`${deviceWidthMap[deviceMode]} ${
+          deviceMode !== 'fluid'
+            ? 'mx-auto shadow-2xl rounded-2xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-bg-main)] relative ring-8 ring-stone-950/10'
+            : 'w-full'
+        } min-h-screen flex flex-col transition-all duration-300`}>
+          <Header />
 
-          {/* Main Content Sections */}
           <main className="flex-1">
-            <Hero
-              eventInfo={publicData.eventInfo}
-              onOpenFlyerModal={() => setIsFlyerModalOpen(true)}
-            />
-
+            <Hero eventInfo={publicData.eventInfo} onOpenFlyerModal={() => setIsFlyerModalOpen(true)} />
             <AboutSection />
-
-            <EventInfoSection
-              eventInfo={publicData.eventInfo}
-              onOpenFlyerModal={() => setIsFlyerModalOpen(true)}
-            />
-
+            <EventInfoSection eventInfo={publicData.eventInfo} onOpenFlyerModal={() => setIsFlyerModalOpen(true)} />
             <ExperienceSection />
-
             <GallerySection items={publicData.gallery || []} />
-
             <VideosSection videos={publicData.videos || []} />
-
             <TestimonialsSection testimonials={publicData.testimonials || []} />
-
             <RegistrationForm />
           </main>
 
-          {/* Footer */}
-          <Footer
-            eventInfo={publicData.eventInfo}
-            onOpenAdmin={() => setIsAdminOpen(true)}
-          />
-
-          {/* Mobile Bottom Sticky Quick Action Bar */}
+          <Footer eventInfo={publicData.eventInfo} />
           <MobileQuickBar />
         </div>
 
-        {/* Admin Management Modal */}
-        <AdminModal
-          isOpen={isAdminOpen}
-          onClose={() => {
-            setIsAdminOpen(false);
-            checkAdminAuth();
-          }}
-          eventInfo={publicData.eventInfo}
-          gallery={publicData.gallery || []}
-          videos={publicData.videos || []}
-          testimonials={publicData.testimonials || []}
-          onRefreshPublicData={fetchPublicData}
-        />
-
-        {/* Official Flyer Modal */}
         <OfficialFlyerModal
           isOpen={isFlyerModalOpen}
           onClose={() => setIsFlyerModalOpen(false)}
           eventInfo={publicData.eventInfo}
-          onOpenAdmin={() => {
-            setIsFlyerModalOpen(false);
-            setIsAdminOpen(true);
-          }}
         />
       </div>
     </ThemeProvider>

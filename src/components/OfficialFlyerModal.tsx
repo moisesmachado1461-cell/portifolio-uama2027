@@ -6,14 +6,12 @@ interface OfficialFlyerModalProps {
   isOpen: boolean;
   onClose: () => void;
   eventInfo: EventInfo;
-  onOpenAdmin?: () => void;
 }
 
 export const OfficialFlyerModal: React.FC<OfficialFlyerModalProps> = ({
   isOpen,
   onClose,
   eventInfo,
-  onOpenAdmin,
 }) => {
   if (!isOpen) return null;
 
@@ -68,17 +66,6 @@ export const OfficialFlyerModal: React.FC<OfficialFlyerModalProps> = ({
               <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] leading-relaxed">
                 As datas específicas, o local exato e o valor de investimento serão publicados assim que a imagem oficial for recebida e anexada pela coordenação.
               </p>
-              {onOpenAdmin && (
-                <button
-                  onClick={() => {
-                    onClose();
-                    onOpenAdmin();
-                  }}
-                  className="text-xs font-semibold text-[var(--color-primary)] underline hover:opacity-80"
-                >
-                  Coordenação: Fazer upload da imagem do cartaz no painel
-                </button>
-              )}
             </div>
           )}
         </div>

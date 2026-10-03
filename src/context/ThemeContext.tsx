@@ -320,22 +320,17 @@ export const ThemeProvider: React.FC<{
 
   const resetTheme = async () => {
     setTheme(DEFAULT_THEME_CONFIG);
-    const token = localStorage.getItem('uama_admin_token');
-    if (token) {
-      try {
-        await fetch('/api/admin/theme/reset', {
-          method: 'POST',
-          credentials: 'same-origin',
-        });
-      } catch (e) {
-        console.error('Error resetting theme on server', e);
-      }
+    try {
+      await fetch('/api/admin/theme/reset', {
+        method: 'POST',
+        credentials: 'same-origin',
+      });
+    } catch (e) {
+      console.error('Error resetting theme on server', e);
     }
   };
 
   const saveThemeToServer = async (): Promise<boolean> => {
-    const token = localStorage.getItem('uama_admin_token');
-    if (!token) return false;
     setIsSaving(true);
     try {
       const res = await fetch('/api/admin/theme', {

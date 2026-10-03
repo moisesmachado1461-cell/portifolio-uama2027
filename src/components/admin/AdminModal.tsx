@@ -42,8 +42,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   testimonials,
   onRefreshPublicData,
 }) => {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('uama_admin_token'));
-  const [adminUser, setAdminUser] = useState<string>(localStorage.getItem('uama_admin_user') || 'admin');
+  const [token, setToken] = useState<string | null>(null);
+  const [adminUser, setAdminUser] = useState<string>('admin');
   const [activeTab, setActiveTab] = useState<string>('dashboard');
 
   const [stats, setStats] = useState<AdminStats>({
@@ -59,14 +59,33 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [registrations, setRegistrations] = useState<Registration[]>([]);
 
   useEffect(() => {
+    if (isOpen) {
+      checkAuth();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (isOpen && token) {
       fetchAdminData();
     }
   }, [isOpen, token]);
 
+  const checkAuth = async () => {
+    try {
+      const res = await fetch('/api/admin/check-auth', { credentials: 'same-origin' });
+      if (res.ok) {
+        const data = await res.json();
+        setAdminUser(data.username || 'admin');
+        setToken('session-cookie');
+      } else {
+        setToken(null);
+      }
+    } catch {
+      setToken(null);
+    }
+  };
+
   const fetchAdminData = async () => {
-    const savedToken = localStorage.getItem('uama_admin_token');
-    if (!savedToken) return;
 
     try {
       const [statsRes, regsRes] = await Promise.all([
@@ -93,35 +112,28 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     }
   };
 
-  const handleLoginSuccess = (newToken: string, user: string) => {
-    setToken(newToken);
+  const handleLoginSuccess = (user: string) => {
     setAdminUser(user);
-    fetchAdminData();
+    setToken('session-cookie');
   };
 
   const handleLogout = async () => {
-    const currentToken = localStorage.getItem('uama_admin_token');
-    if (currentToken) {
-      try {
-        await fetch('/api/admin/logout', {
-          method: 'POST',
-          credentials: 'same-origin',
-        });
-      } catch {
-        // Ignore network errors on logout
-      }
+    try {
+      await fetch('/api/admin/logout', {
+        method: 'POST',
+        credentials: 'same-origin',
+      });
+    } catch {
+      // A sessão local é encerrada mesmo se a rede falhar.
     }
-    localStorage.removeItem('uama_admin_token');
-    localStorage.removeItem('uama_admin_user');
     setToken(null);
+    setAdminUser('admin');
   };
 
   const handleUpdateRegistrationStatus = async (
     id: string,
     newStatus: 'pendente' | 'confirmada' | 'cancelada'
   ) => {
-    const savedToken = localStorage.getItem('uama_admin_token');
-    if (!savedToken) return;
     try {
       const res = await fetch(`/api/admin/registrations/${id}/status`, {
         method: 'PATCH',
@@ -138,8 +150,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   };
 
   const handleDeleteRegistration = async (id: string) => {
-    const savedToken = localStorage.getItem('uama_admin_token');
-    if (!savedToken) return;
     try {
       const res = await fetch(`/api/admin/registrations/${id}`, {
           method: 'DELETE',
@@ -154,8 +164,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   };
 
   const handleUpdateEventInfo = async (newInfo: Partial<EventInfo>): Promise<boolean> => {
-    const savedToken = localStorage.getItem('uama_admin_token');
-    if (!savedToken) return false;
     try {
       const res = await fetch('/api/admin/event-info', {
         method: 'PUT',
@@ -174,8 +182,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   };
 
   const handleAddPhoto = async (photo: { url: string; title: string; category: string; isFeatured: boolean }) => {
-    const savedToken = localStorage.getItem('uama_admin_token');
-    if (!savedToken) return;
     try {
       const res = await fetch('/api/admin/gallery', {
         method: 'POST',
@@ -193,8 +199,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   };
 
   const handleDeletePhoto = async (id: string) => {
-    const savedToken = localStorage.getItem('uama_admin_token');
-    if (!savedToken) return;
     try {
       const res = await fetch(`/api/admin/gallery/${id}`, {
           method: 'DELETE',
@@ -210,8 +214,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   };
 
   const handleAddVideo = async (video: Partial<VideoItem>) => {
-    const savedToken = localStorage.getItem('uama_admin_token');
-    if (!savedToken) return;
     try {
       const res = await fetch('/api/admin/videos', {
         method: 'POST',
@@ -229,8 +231,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   };
 
   const handleDeleteVideo = async (id: string) => {
-    const savedToken = localStorage.getItem('uama_admin_token');
-    if (!savedToken) return;
     try {
       const res = await fetch(`/api/admin/videos/${id}`, {
           method: 'DELETE',
@@ -246,8 +246,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   };
 
   const handleAddTestimonial = async (test: Partial<TestimonialItem>) => {
-    const savedToken = localStorage.getItem('uama_admin_token');
-    if (!savedToken) return;
     try {
       const res = await fetch('/api/admin/testimonials', {
         method: 'POST',
@@ -265,8 +263,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   };
 
   const handleDeleteTestimonial = async (id: string) => {
-    const savedToken = localStorage.getItem('uama_admin_token');
-    if (!savedToken) return;
     try {
       const res = await fetch(`/api/admin/testimonials/${id}`, {
           method: 'DELETE',

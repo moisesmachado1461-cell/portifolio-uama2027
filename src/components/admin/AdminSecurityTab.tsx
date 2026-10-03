@@ -34,8 +34,6 @@ export const AdminSecurityTab: React.FC = () => {
       if (!res.ok) {
         setMessage({ type: 'error', text: data.error || 'Erro ao alterar senha.' });
       } else {
-        localStorage.removeItem('uama_admin_token');
-        localStorage.removeItem('uama_admin_user');
         setMessage({ type: 'success', text: 'Senha alterada com sucesso. Faça login novamente.' });
         setCurrentPassword('');
         setNewPassword('');
