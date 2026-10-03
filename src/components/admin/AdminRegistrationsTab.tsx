@@ -9,6 +9,9 @@ import {
   AlertTriangle,
   X,
   FileSpreadsheet,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
 } from 'lucide-react';
 import { Registration } from '../../types/index.js';
 
@@ -33,6 +36,9 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
   const [deleteTarget, setDeleteTarget] = useState<Registration | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showSensitiveData, setShowSensitiveData] = useState(false);
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name'>('newest');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
 
   const maskCpf = (cpf?: string) => {
     const digits = (cpf || '').replace(/\D/g, '');
@@ -93,22 +99,49 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
     return age;
   };
 
-  // Filtrar inscrições
-  const filtered = registrations.filter((reg) => {
-    const matchesStatus =
-      statusFilter === 'todos' || reg.status === statusFilter;
+  const filtered = registrations
+    .filter((reg) => {
+      const matchesStatus =
+        statusFilter === 'todos' || reg.status === statusFilter;
 
-    const term = searchTerm.toLowerCase().trim();
+      const term = searchTerm.toLowerCase().trim();
+      const matchesSearch =
+        !term ||
+        reg.fullName.toLowerCase().includes(term) ||
+        reg.cpf.includes(term) ||
+        reg.phone.includes(term) ||
+        reg.protocol.toLowerCase().includes(term) ||
+        reg.shirtSize?.toLowerCase().includes(term) ||
+        reg.slipperSize?.toLowerCase().includes(term);
 
-    const matchesSearch =
-      !term ||
-      reg.fullName.toLowerCase().includes(term) ||
-      reg.cpf.includes(term) ||
-      reg.phone.includes(term) ||
-      reg.protocol.toLowerCase().includes(term);
+      return matchesStatus && matchesSearch;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name') return a.fullName.localeCompare(b.fullName, 'pt-BR');
+      const aTime = new Date(a.createdAt).getTime();
+      const bTime = new Date(b.createdAt).getTime();
+      return sortBy === 'oldest' ? aTime - bTime : bTime - aTime;
+    });
 
-    return matchesStatus && matchesSearch;
-  });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const pageStart = (safePage - 1) * pageSize;
+  const paginated = filtered.slice(pageStart, pageStart + pageSize);
+
+  const totals = {
+    total: registrations.length,
+    confirmed: registrations.filter((r) => r.status === 'confirmada').length,
+    pending: registrations.filter((r) => r.status === 'pendente').length,
+    cancelled: registrations.filter((r) => r.status === 'cancelada').length,
+  };
+
+  const changeSearch = (value: string) => { setSearchTerm(value); setCurrentPage(1); };
+  const changeStatus = (value: string) => { setStatusFilter(value); setCurrentPage(1); };
+  const changeSort = (value: 'newest' | 'oldest' | 'name') => { setSortBy(value); setCurrentPage(1); };
+
+  const copyText = async (value: string) => {
+    try { await navigator.clipboard.writeText(value); } catch { /* sem bloqueio da operação */ }
+  };
 
   // Exportar CSV
   const handleExportCSV = () => {
@@ -202,48 +235,69 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
 
+      {/* Resumo operacional */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          ['Total', totals.total, 'todos'],
+          ['Confirmadas', totals.confirmed, 'confirmada'],
+          ['Pendentes', totals.pending, 'pendente'],
+          ['Canceladas', totals.cancelled, 'cancelada'],
+        ].map(([label, value, filter]) => (
+          <button
+            key={String(label)}
+            onClick={() => changeStatus(String(filter))}
+            className={`text-left p-4 rounded-2xl border transition-colors ${statusFilter === filter ? 'border-[var(--color-primary)] bg-[var(--color-bg-secondary)]' : 'border-[var(--color-card-border)] bg-[var(--color-card-bg)]'}`}
+          >
+            <span className="text-[10px] uppercase tracking-wider text-[var(--color-text-secondary)]">{label}</span>
+            <strong className="block mt-1 text-2xl font-mono text-[var(--color-text-title)]">{value}</strong>
+          </button>
+        ))}
+      </div>
+
       {/* Barra superior */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-
-        {/* Busca */}
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-xl">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]" />
-
           <input
             type="text"
-            placeholder="Buscar por nome, CPF, telefone ou protocolo..."
+            placeholder="Buscar por nome, CPF, telefone, protocolo, camisa ou chinelo..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => changeSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--color-border)] text-xs sm:text-sm bg-[var(--color-card-bg)] text-[var(--color-text-main)] focus:outline-hidden focus:border-[var(--color-form-focus)]"
           />
         </div>
 
-        {/* Filtro e exportação */}
-        <div className="flex items-center gap-3">
-
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-xl px-3 py-1.5">
             <Filter className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" />
-
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-xs bg-transparent text-[var(--color-text-main)] focus:outline-hidden cursor-pointer"
-            >
-              <option value="todos">Todos os Status</option>
-              <option value="confirmada">Confirmada</option>
-              <option value="pendente">Pendente</option>
-              <option value="cancelada">Cancelada</option>
+            <select value={statusFilter} onChange={(e) => changeStatus(e.target.value)} className="text-xs bg-transparent text-[var(--color-text-main)] focus:outline-hidden cursor-pointer">
+              <option value="todos">Todos os status</option>
+              <option value="confirmada">Confirmadas</option>
+              <option value="pendente">Pendentes</option>
+              <option value="cancelada">Canceladas</option>
             </select>
           </div>
 
-          <button
-            onClick={handleExportCSV}
-            className="px-4 py-2 rounded-xl text-xs font-semibold text-[var(--color-text-main)] bg-[var(--color-card-bg)] border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] transition-colors flex items-center gap-2 shadow-2xs whitespace-nowrap"
+          <select
+            value={sortBy}
+            onChange={(e) => changeSort(e.target.value as 'newest' | 'oldest' | 'name')}
+            className="text-xs bg-[var(--color-card-bg)] text-[var(--color-text-main)] border border-[var(--color-border)] rounded-xl px-3 py-2.5 focus:outline-hidden cursor-pointer"
           >
+            <option value="newest">Mais recentes</option>
+            <option value="oldest">Mais antigas</option>
+            <option value="name">Nome A–Z</option>
+          </select>
+
+          <button onClick={handleExportCSV} className="px-4 py-2 rounded-xl text-xs font-semibold text-[var(--color-text-main)] bg-[var(--color-card-bg)] border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] transition-colors flex items-center gap-2 shadow-2xs whitespace-nowrap">
             <Download className="w-3.5 h-3.5" />
-            <span>Exportar CSV</span>
+            <span>Exportar filtrados</span>
           </button>
         </div>
+      </div>
+
+      <div className="flex items-center justify-between text-[11px] text-[var(--color-text-secondary)]">
+        <span>{filtered.length} resultado(s) encontrado(s)</span>
+        {filtered.length > 0 && <span>Exibindo {pageStart + 1}–{Math.min(pageStart + pageSize, filtered.length)}</span>}
       </div>
 
       {/* Tabela */}
@@ -293,7 +347,7 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
                       Telefone
                     </th>
 
-                    <th className="py-3 px-4">Data de Nascimento</th>
+                    <th className="py-3 px-4">Kit</th>
 
                     <th className="py-3 px-4">
                       Status
@@ -308,7 +362,7 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
 
                 <tbody className="divide-y divide-[var(--color-border)]/50">
 
-                  {filtered.map((reg) => (
+                  {paginated.map((reg) => (
 
                     <tr
                       key={reg.id}
@@ -361,11 +415,10 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
 
                       </td>
 
-                      <td className="py-3 px-4 text-[var(--color-text-secondary)]">
-  {reg.birthDate
-    ? new Date(reg.birthDate + 'T12:00:00').toLocaleDateString('pt-BR')
-    : 'Não informado'}
-</td>
+                      <td className="py-3 px-4 text-[var(--color-text-main)]">
+                        <span className="block">Camisa: <strong>{reg.shirtSize || '—'}</strong></span>
+                        <span className="block text-[10px] text-[var(--color-text-secondary)]">Chinelo: {reg.slipperSize || '—'}</span>
+                      </td>
 
                       <td className="py-3 px-4">
 
@@ -442,7 +495,7 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
             {/* Mobile */}
             <div className="block md:hidden divide-y divide-[var(--color-border)]/60">
 
-              {filtered.map((reg) => (
+              {paginated.map((reg) => (
 
                 <div
                   key={reg.id}
@@ -538,6 +591,11 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
                     </div>
 
                     <div>
+                      <span className="text-[10px] uppercase tracking-wider block">Kit</span>
+                      <span className="text-[var(--color-text-main)]">Camisa {reg.shirtSize || '—'} · Chinelo {reg.slipperSize || '—'}</span>
+                    </div>
+
+                    <div>
                       <span className="text-[10px] uppercase tracking-wider block">
                         Inscrição
                       </span>
@@ -585,6 +643,28 @@ export const AdminRegistrationsTab: React.FC<AdminRegistrationsTabProps> = ({
           </>
         )}
       </div>
+
+      {filtered.length > pageSize && (
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={safePage === 1}
+            className="p-2 rounded-lg border border-[var(--color-border)] disabled:opacity-40 bg-[var(--color-card-bg)]"
+            aria-label="Página anterior"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-xs text-[var(--color-text-secondary)]">Página <strong className="text-[var(--color-text-main)]">{safePage}</strong> de {totalPages}</span>
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={safePage === totalPages}
+            className="p-2 rounded-lg border border-[var(--color-border)] disabled:opacity-40 bg-[var(--color-card-bg)]"
+            aria-label="Próxima página"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Modal de detalhes */}
       {selectedReg && (
