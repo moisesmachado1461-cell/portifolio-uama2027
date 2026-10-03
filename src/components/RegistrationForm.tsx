@@ -324,6 +324,14 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
             <div className="absolute top-0 left-0 right-0 h-1 bg-[var(--color-primary)]" />
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4 flex items-start gap-3 text-xs sm:text-sm">
+                <Lock className="w-4 h-4 text-[var(--color-primary)] shrink-0 mt-0.5" />
+                <p className="text-[var(--color-text-secondary)] leading-relaxed">
+                  Os dados deste formulário são usados para processar e organizar sua inscrição no Retiro UAMA.
+                  Saiba mais no <a href="/privacidade" target="_blank" rel="noreferrer" className="font-semibold text-[var(--color-primary)] underline underline-offset-2">Aviso de Privacidade</a>.
+                </p>
+              </div>
+
               {errorMessage && (
                 <div role="alert" aria-live="polite" className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 flex items-start gap-3 text-xs sm:text-sm">
                   <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />

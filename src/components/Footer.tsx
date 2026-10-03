@@ -27,6 +27,7 @@ export const Footer: React.FC<FooterProps> = ({ eventInfo }) => (
             <a href="#informacoes" className="hover:text-[var(--color-primary)]">Informações do Evento</a>
             <a href="#galeria" className="hover:text-[var(--color-primary)]">Galeria de Fotos</a>
             <a href="#inscricao" className="hover:text-[var(--color-primary)]">Fazer Inscrição</a>
+            <a href="/privacidade" className="hover:text-[var(--color-primary)]">Privacidade</a>
           </div>
         </div>
       </div>

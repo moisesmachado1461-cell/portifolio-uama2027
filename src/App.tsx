@@ -14,14 +14,21 @@ import { OfficialFlyerModal } from './components/OfficialFlyerModal.js';
 import { MobileQuickBar } from './components/MobileQuickBar.js';
 import { ResponsivePreviewBar, DeviceMode } from './components/ResponsivePreviewBar.js';
 import { AdminPage } from './components/admin/AdminPage.js';
+import { PrivacyPage } from './components/PrivacyPage.js';
 import { PublicData } from './types/index.js';
 import { DEFAULT_THEME_CONFIG } from './context/ThemeContext.js';
 
 export default function App() {
-  const isAdminRoute = window.location.pathname === '/admin' || window.location.pathname.startsWith('/admin/');
+  const path = window.location.pathname;
+  const isAdminRoute = path === '/admin' || path.startsWith('/admin/');
+  const isPrivacyRoute = path === '/privacidade' || path === '/privacidade/';
 
   if (isAdminRoute) {
     return <AdminPage />;
+  }
+
+  if (isPrivacyRoute) {
+    return <PrivacyPage />;
   }
 
   return <PublicSite />;
