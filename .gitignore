@@ -9,3 +9,7 @@ coverage/
 
 # Banco local legado / dados pessoais
 data/database.json
+
+# Backups locais com dados pessoais - nunca versionar
+backups/
+*.uama-backup.json
