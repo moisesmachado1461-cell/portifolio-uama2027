@@ -141,20 +141,23 @@ app.post('/api/register', persistentRateLimit('public-register', 8, 15 * 60), as
   try {
     const { fullName, birthDate, phone, address, rg, cpf, slipperSize, shirtSize, acknowledgement } = req.body;
 
-    if (!fullName || typeof fullName !== 'string' || fullName.trim().length < 3) {
-      res.status(400).json({ error: 'Por favor, informe seu nome completo (mínimo de 3 caracteres).' }); return;
+    if (!fullName || typeof fullName !== 'string' || fullName.trim().length < 3 || fullName.trim().length > 120) {
+      res.status(400).json({ error: 'Por favor, informe um nome completo válido.' }); return;
     }
     if (!cpf || !isValidCPF(cpf)) { res.status(400).json({ error: 'CPF inválido. Verifique os números informados.' }); return; }
     if (!phone || !isValidPhone(phone)) { res.status(400).json({ error: 'Número de telefone inválido. Informe o DDD e o número completo.' }); return; }
-    if (!birthDate || typeof birthDate !== 'string' || Number.isNaN(Date.parse(birthDate))) { res.status(400).json({ error: 'Data de nascimento inválida.' }); return; }
+    if (!birthDate || typeof birthDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(birthDate) || Number.isNaN(Date.parse(`${birthDate}T12:00:00`))) { res.status(400).json({ error: 'Data de nascimento inválida.' }); return; }
 
     const birth = new Date(`${birthDate}T12:00:00`);
     const today = new Date();
     if (birth > today || birth.getFullYear() < 1900) { res.status(400).json({ error: 'Data de nascimento fora do intervalo permitido.' }); return; }
     if (!address || typeof address !== 'string' || address.trim().length < 8 || address.trim().length > 250) { res.status(400).json({ error: 'Informe um endereço completo válido.' }); return; }
     if (!rg || typeof rg !== 'string' || rg.trim().length < 5 || rg.trim().length > 30) { res.status(400).json({ error: 'RG inválido.' }); return; }
-    if (!slipperSize || typeof slipperSize !== 'string' || !/^[0-9]{2}$/.test(slipperSize.trim())) { res.status(400).json({ error: 'Número do chinelo inválido.' }); return; }
-    if (!shirtSize || typeof shirtSize !== 'string' || shirtSize.trim().length > 10) { res.status(400).json({ error: 'Tamanho da camisa inválido.' }); return; }
+    const slipperNumber = Number(slipperSize);
+    if (!slipperSize || typeof slipperSize !== 'string' || !/^[0-9]{2}$/.test(slipperSize.trim()) || slipperNumber < 30 || slipperNumber > 45) { res.status(400).json({ error: 'Número do chinelo inválido.' }); return; }
+    const normalizedShirtSize = typeof shirtSize === 'string' ? shirtSize.trim().toUpperCase() : '';
+    const allowedShirtSizes = new Set(['PP', 'P', 'M', 'G', 'GG', 'XGG', 'G1', 'G2', 'G3']);
+    if (!allowedShirtSizes.has(normalizedShirtSize)) { res.status(400).json({ error: 'Tamanho da camisa inválido.' }); return; }
     if (acknowledgement !== true) { res.status(400).json({ error: 'É necessário confirmar a ciência sobre a política de desistência.' }); return; }
 
     const cleanCPF = cpf.replace(/\D/g, '');
@@ -168,8 +171,8 @@ app.post('/api/register', persistentRateLimit('public-register', 8, 15 * 60), as
     }
 
     const cleanCpfFormatted = `${cleanCPF.slice(0, 3)}.${cleanCPF.slice(3, 6)}.${cleanCPF.slice(6, 9)}-${cleanCPF.slice(9, 11)}`;
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const protocol = `UAMA-${new Date().getFullYear()}-${randomSuffix}`;
+    const protocolSuffix = crypto.randomBytes(3).toString('hex').toUpperCase();
+    const protocol = `UAMA-${new Date().getFullYear()}-${protocolSuffix}`;
 
     const newRegistration: Registration = {
       id: `reg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -181,7 +184,7 @@ app.post('/api/register', persistentRateLimit('public-register', 8, 15 * 60), as
       rg: rg.trim(),
       cpf: cleanCpfFormatted,
       slipperSize: slipperSize.trim(),
-      shirtSize: shirtSize.trim().toUpperCase(),
+      shirtSize: normalizedShirtSize,
       acknowledgement: true,
       status: 'pendente',
       createdAt: new Date().toISOString(),

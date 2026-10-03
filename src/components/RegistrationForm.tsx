@@ -262,91 +262,24 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
 
               <div className="space-y-2 text-xs sm:text-sm">
                 <div>
-                  <span className="text-[var(--color-text-secondary)]">
-                    Nome Completo:
-                  </span>{' '}
+                  <span className="text-[var(--color-text-secondary)]">Nome Completo:</span>{' '}
                   <span className="font-semibold text-[var(--color-text-title)] break-words">
                     {successRegistration.fullName}
                   </span>
                 </div>
 
                 <div>
-                  <span className="text-[var(--color-text-secondary)]">
-                    Data de Nascimento:
-                  </span>{' '}
+                  <span className="text-[var(--color-text-secondary)]">Status:</span>{' '}
+                  <span className="font-medium text-[var(--color-text-title)]">
+                    {successRegistration.status === 'pendente' ? 'Pendente de confirmação' : successRegistration.status}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[var(--color-text-secondary)]">Data de Registro:</span>{' '}
                   <span className="text-[var(--color-text-title)]">
-                    {new Date(
-                      `${successRegistration.birthDate}T00:00:00`
-                    ).toLocaleDateString('pt-BR')}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-[var(--color-text-secondary)]">
-                    Telefone:
-                  </span>{' '}
-                  <span className="font-medium text-[var(--color-text-title)]">
-                    {successRegistration.phone}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-[var(--color-text-secondary)]">
-                    Endereço:
-                  </span>{' '}
-                  <span className="font-medium text-[var(--color-text-title)] break-words">
-                    {successRegistration.address}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-[var(--color-text-secondary)]">
-                    RG:
-                  </span>{' '}
-                  <span className="font-medium text-[var(--color-text-title)]">
-                    {successRegistration.rg}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-[var(--color-text-secondary)]">
-                    CPF:
-                  </span>{' '}
-                  <span className="font-mono font-medium text-[var(--color-text-title)]">
-                    {successRegistration.cpf}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-[var(--color-text-secondary)]">
-                    Número do Chinelo:
-                  </span>{' '}
-                  <span className="font-medium text-[var(--color-text-title)]">
-                    {successRegistration.slipperSize}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-[var(--color-text-secondary)]">
-                    Tamanho da Camisa:
-                  </span>{' '}
-                  <span className="font-medium text-[var(--color-text-title)]">
-                    {successRegistration.shirtSize}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-[var(--color-text-secondary)]">
-                    Data de Registro:
-                  </span>{' '}
-                  <span className="text-[var(--color-text-title)]">
-                    {new Date(
-                      successRegistration.createdAt
-                    ).toLocaleDateString('pt-BR')}{' '}
-                    às{' '}
-                    {new Date(
-                      successRegistration.createdAt
-                    ).toLocaleTimeString('pt-BR', {
+                    {new Date(successRegistration.createdAt).toLocaleDateString('pt-BR')} às{' '}
+                    {new Date(successRegistration.createdAt).toLocaleTimeString('pt-BR', {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
@@ -392,7 +325,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {errorMessage && (
-                <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 flex items-start gap-3 text-xs sm:text-sm">
+                <div role="alert" aria-live="polite" className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 flex items-start gap-3 text-xs sm:text-sm">
                   <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                   <div className="flex-1 font-medium">{errorMessage}</div>
                 </div>
@@ -411,6 +344,8 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
                   id="fullName"
                   type="text"
                   required
+                  maxLength={120}
+                  autoComplete="name"
                   value={fullName}
                   onChange={(e) => {
                     setFullName(e.target.value);
@@ -506,6 +441,8 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
                   id="address"
                   required
                   rows={3}
+                  maxLength={250}
+                  autoComplete="street-address"
                   value={address}
                   onChange={(e) => {
                     setAddress(e.target.value);
@@ -537,6 +474,8 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
                     id="rg"
                     type="text"
                     required
+                    maxLength={30}
+                    autoComplete="off"
                     value={rg}
                     onChange={(e) => {
                       setRg(e.target.value);
@@ -568,6 +507,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
                     required
                     inputMode="numeric"
                     maxLength={14}
+                    autoComplete="off"
                     value={cpf}
                     onChange={handleCpfChange}
                     onBlur={() =>
@@ -598,11 +538,9 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
                   Número do Chinelo <span className="text-red-600">*</span>
                 </label>
 
-                <input
+                <select
                   id="slipperSize"
-                  type="text"
                   required
-                  inputMode="numeric"
                   value={slipperSize}
                   onChange={(e) => {
                     setSlipperSize(e.target.value);
@@ -611,13 +549,17 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
                   onBlur={() =>
                     setTouched((prev) => ({ ...prev, slipperSize: true }))
                   }
-                  placeholder="Ex: 36"
-                  className={`w-full px-4 py-3 rounded-xl border text-sm bg-[var(--color-card-bg)] text-[var(--color-text-main)] placeholder-[var(--color-text-secondary)]/60 focus:outline-hidden transition-colors ${
+                  className={`w-full px-4 py-3 rounded-xl border text-sm bg-[var(--color-card-bg)] text-[var(--color-text-main)] focus:outline-hidden transition-colors ${
                     touched.slipperSize && !isSlipperSizeValid
                       ? 'border-red-400 focus:border-red-500'
                       : 'border-[var(--color-border)] focus:border-[var(--color-form-focus)]'
                   }`}
-                />
+                >
+                  <option value="">Selecione</option>
+                  {Array.from({ length: 16 }, (_, index) => 30 + index).map((size) => (
+                    <option key={size} value={String(size)}>{size}</option>
+                  ))}
+                </select>
               </div>
 
 
@@ -630,26 +572,28 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
                   Tamanho da Camisa <span className="text-red-600">*</span>
                 </label>
 
-                <input
+                <select
                   id="shirtSize"
-                  type="text"
                   required
-                  maxLength={10}
                   value={shirtSize}
                   onChange={(e) => {
-                    setShirtSize(e.target.value.toUpperCase());
+                    setShirtSize(e.target.value);
                     clearError();
                   }}
                   onBlur={() =>
                     setTouched((prev) => ({ ...prev, shirtSize: true }))
                   }
-                  placeholder="Ex: P, M, G, GG ou G1"
-                  className={`w-full px-4 py-3 rounded-xl border text-sm bg-[var(--color-card-bg)] text-[var(--color-text-main)] placeholder-[var(--color-text-secondary)]/60 focus:outline-hidden transition-colors ${
+                  className={`w-full px-4 py-3 rounded-xl border text-sm bg-[var(--color-card-bg)] text-[var(--color-text-main)] focus:outline-hidden transition-colors ${
                     touched.shirtSize && !isShirtSizeValid
                       ? 'border-red-400 focus:border-red-500'
                       : 'border-[var(--color-border)] focus:border-[var(--color-form-focus)]'
                   }`}
-                />
+                >
+                  <option value="">Selecione</option>
+                  {['PP', 'P', 'M', 'G', 'GG', 'XGG', 'G1', 'G2', 'G3'].map((size) => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Termo obrigatório */}
@@ -690,9 +634,10 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
                 <Lock className="w-4 h-4 text-[var(--color-primary)] shrink-0 mt-0.5" />
 
                 <p className="leading-relaxed">
-                  Seus dados serão utilizados pela coordenação do Retiro UAMA
-                  para organização da inscrição, comunicação e demais
-                  necessidades relacionadas ao evento.
+                  Seus dados serão utilizados somente pela coordenação do Retiro UAMA
+                  para organizar sua participação, entrar em contato quando necessário
+                  e administrar o evento. O protocolo é a informação recomendada para
+                  guardar e compartilhar.
                 </p>
               </div>
 
