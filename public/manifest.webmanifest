@@ -1,0 +1,26 @@
+{
+  "name": "Retiro Anual de Mulheres UAMA",
+  "short_name": "UAMA",
+  "description": "Site oficial do Retiro Anual de Mulheres UAMA.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FAF7F2",
+  "theme_color": "#6B1F36",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/icons/uama-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/uama-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
