@@ -266,3 +266,109 @@ textarea:focus-visible {
     --color-card-border: #a8a29e;
   }
 }
+
+
+/* =========================================================
+   UAMA — FASE PRINCIPAL 2: EXPERIÊNCIA MOBILE
+   Objetivo: navegação, leitura e formulários confortáveis
+   em telas pequenas, sem alterar a identidade visual.
+   ========================================================= */
+
+@media (max-width: 767px) {
+  /* Consistent horizontal breathing room on small screens. */
+  main section > div,
+  footer > div {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Reduce oversized vertical gaps while keeping sections distinct. */
+  main section {
+    scroll-margin-top: 4.5rem;
+  }
+
+  main section[class*="py-20"],
+  main section[class*="py-24"] {
+    padding-top: 3.75rem !important;
+    padding-bottom: 3.75rem !important;
+  }
+
+  /* Cards should feel compact but still touch-friendly. */
+  main .rounded-2xl,
+  main .rounded-3xl {
+    border-radius: 1rem;
+  }
+
+  main [class*="p-8"] {
+    padding: 1.25rem !important;
+  }
+
+  main [class*="p-6"] {
+    padding: 1.125rem !important;
+  }
+
+  /* Important CTAs occupy useful width on phones. */
+  main button,
+  main a[role="button"] {
+    min-height: 48px;
+  }
+
+  /* Form controls: full-width, readable and easier to tap. */
+  form input,
+  form select,
+  form textarea,
+  form button[type="submit"] {
+    width: 100%;
+  }
+
+  form input,
+  form select,
+  form textarea {
+    min-height: 48px;
+  }
+
+  form textarea {
+    min-height: 112px;
+  }
+
+  /* Prevent long values/protocols from breaking the viewport. */
+  main,
+  main * {
+    overflow-wrap: anywhere;
+  }
+
+  /* Horizontal tab rows remain usable without squeezing labels. */
+  .no-scrollbar {
+    scroll-snap-type: x proximity;
+  }
+
+  .no-scrollbar > * {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+
+  /* Tables can scroll instead of shrinking text to unreadable sizes. */
+  table {
+    min-width: 720px;
+  }
+
+  /* Sticky mobile quick actions stay above the iOS home indicator. */
+  .safe-pb {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Compact phones need extra care. */
+@media (max-width: 390px) {
+  main h1 {
+    font-size: clamp(2rem, 10vw, 2.6rem) !important;
+  }
+
+  main h2 {
+    font-size: clamp(1.7rem, 8vw, 2.15rem) !important;
+  }
+
+  main .text-center {
+    text-wrap: pretty;
+  }
+}

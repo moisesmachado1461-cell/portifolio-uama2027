@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, MapPin, DollarSign, Utensils, BedDouble, Clock, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
+import { Calendar, MapPin, DollarSign, Utensils, BedDouble, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
 import { EventInfo } from '../types/index.js';
 
 interface EventInfoSectionProps {
@@ -168,57 +168,6 @@ export const EventInfoSection: React.FC<EventInfoSectionProps> = ({ eventInfo, o
             <div className="pt-2 border-t border-[var(--color-border)] text-xs text-[var(--color-text-secondary)]">
               Kit de boas-vindas com crachá e caderno temático entregue no check-in.
             </div>
-          </div>
-        </div>
-
-        {/* Schedule Highlights Timeline */}
-        <div className="p-8 rounded-2xl bg-[var(--color-card-bg)] border border-[var(--color-card-border)] shadow-sm">
-          <div className="max-w-2xl mb-8">
-            <div className="flex items-center gap-2 text-[var(--color-primary)] font-semibold text-xs uppercase tracking-widest">
-              <Clock className="w-4 h-4" />
-              <span>Cronograma Geral</span>
-            </div>
-            <h3 className="text-2xl font-serif font-bold text-[var(--color-text-title)] mt-1">
-              Programação dos 3 Dias
-            </h3>
-            <p className="text-xs sm:text-sm text-[var(--color-text-secondary)] mt-1">
-              Horários planejados para conciliar momentos de profunda reflexão, palestras e descanso.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {['Sexta-feira', 'Sábado', 'Domingo'].map((day) => {
-              const itemsForDay = (eventInfo.scheduleHighlights || []).filter(
-                (item) => item.day.toLowerCase().includes(day.toLowerCase())
-              );
-              return (
-                <div key={day} className="space-y-3">
-                  <div className="pb-2 border-b border-[var(--color-border)]">
-                    <span className="text-xs uppercase tracking-wider font-semibold text-[var(--color-primary)]">
-                      {day}
-                    </span>
-                  </div>
-                  <div className="space-y-3">
-                    {itemsForDay.length > 0 ? (
-                      itemsForDay.map((item, idx) => (
-                        <div key={idx} className="text-xs space-y-0.5">
-                          <p className="font-mono text-[11px] font-semibold text-[var(--color-secondary)]">
-                            {item.time}
-                          </p>
-                          <p className="text-[var(--color-text-main)] font-medium">
-                            {item.activity}
-                          </p>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-xs text-[var(--color-text-secondary)] italic">
-                        Atividades sendo confirmadas.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
           </div>
         </div>
       </div>
