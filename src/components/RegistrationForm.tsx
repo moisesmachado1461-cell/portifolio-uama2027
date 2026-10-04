@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import {
   CheckCircle,
@@ -9,6 +9,8 @@ import {
   Printer,
   RotateCcw,
   Loader2,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { isValidCPF, maskCPF, isValidPhone, maskPhone } from '../utils/validation.js';
 import { Registration } from '../types/index.js';
@@ -35,6 +37,8 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successRegistration, setSuccessRegistration] =
     useState<RegistrationReceipt | null>(null);
+  const [protocolCopied, setProtocolCopied] = useState(false);
+  const successHeadingRef = useRef<HTMLHeadingElement | null>(null);
 
   const isNameValid = fullName.trim().length >= 3;
   const isBirthDateValid = /^\d{4}-\d{2}-\d{2}$/.test(birthDate);
@@ -55,6 +59,29 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
     isSlipperSizeValid &&
     isShirtSizeValid &&
     acknowledgement;
+
+
+
+  useEffect(() => {
+    if (!successRegistration) return;
+
+    requestAnimationFrame(() => {
+      successHeadingRef.current?.focus();
+      successHeadingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }, [successRegistration]);
+
+  const handleCopyProtocol = async () => {
+    if (!successRegistration) return;
+
+    try {
+      await navigator.clipboard.writeText(successRegistration.protocol);
+      setProtocolCopied(true);
+      window.setTimeout(() => setProtocolCopied(false), 2200);
+    } catch {
+      setErrorMessage('Não foi possível copiar automaticamente. Selecione o protocolo e copie manualmente.');
+    }
+  };
 
   const clearError = () => {
     if (errorMessage) {
@@ -181,6 +208,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
     setTouched({});
     setErrorMessage(null);
     setSuccessRegistration(null);
+    setProtocolCopied(false);
   };
 
   const handlePrint = () => {
@@ -232,14 +260,18 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
                 Inscrição realizada com sucesso
               </span>
 
-              <h3 className="text-3xl font-serif font-bold text-[var(--color-text-title)]">
+              <h3
+                ref={successHeadingRef}
+                tabIndex={-1}
+                className="text-3xl font-serif font-bold text-[var(--color-text-title)] outline-none"
+              >
                 Seja muito bem-vinda,{' '}
                 {successRegistration.fullName.split(' ')[0]}!
               </h3>
 
               <p className="text-sm text-[var(--color-text-secondary)] max-w-lg mx-auto leading-relaxed">
-                Seus dados foram registrados pela coordenação do Retiro UAMA.
-                Guarde seu protocolo de inscrição.
+                Sua inscrição foi recebida com sucesso. Guarde seu protocolo e
+                aguarde as próximas orientações da coordenação do Retiro UAMA.
               </p>
             </div>
 
@@ -250,9 +282,30 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
                     Protocolo de Inscrição
                   </p>
 
-                  <p className="font-mono text-sm sm:text-base font-bold text-[var(--color-primary)] break-all">
-                    {successRegistration.protocol}
-                  </p>
+                  <div className="mt-1 flex flex-col sm:flex-row sm:items-center gap-2">
+                    <p className="font-mono text-sm sm:text-base font-bold text-[var(--color-primary)] break-all">
+                      {successRegistration.protocol}
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={handleCopyProtocol}
+                      className="inline-flex items-center justify-center gap-1.5 min-h-[40px] px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-card-bg)] text-xs font-semibold text-[var(--color-text-main)] hover:bg-[var(--color-bg-secondary)] transition-colors"
+                      aria-live="polite"
+                    >
+                      {protocolCopied ? (
+                        <>
+                          <Check className="w-4 h-4 text-emerald-700" />
+                          Copiado
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          Copiar protocolo
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-medium bg-amber-100 text-amber-900 border border-amber-300 shrink-0">
@@ -293,6 +346,26 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
               </div>
             </div>
 
+            <div className="max-w-md mx-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-5 text-left">
+              <p className="text-xs uppercase tracking-wider font-bold text-[var(--color-text-title)]">
+                Próximos passos
+              </p>
+              <ol className="mt-3 space-y-2.5 text-sm leading-relaxed text-[var(--color-text-main)]">
+                <li className="flex gap-2.5">
+                  <span className="font-bold text-[var(--color-primary)]">1.</span>
+                  <span>Guarde ou copie seu protocolo de inscrição.</span>
+                </li>
+                <li className="flex gap-2.5">
+                  <span className="font-bold text-[var(--color-primary)]">2.</span>
+                  <span>Aguarde a confirmação e as orientações da coordenação UAMA.</span>
+                </li>
+                <li className="flex gap-2.5">
+                  <span className="font-bold text-[var(--color-primary)]">3.</span>
+                  <span>Não faça uma nova inscrição com o mesmo CPF; seus dados já foram registrados.</span>
+                </li>
+              </ol>
+            </div>
+
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3 pt-2">
               <button
                 onClick={handleShareWhatsApp}
@@ -324,14 +397,6 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
             <div className="absolute top-0 left-0 right-0 h-1 bg-[var(--color-primary)]" />
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4 flex items-start gap-3 text-xs sm:text-sm">
-                <Lock className="w-4 h-4 text-[var(--color-primary)] shrink-0 mt-0.5" />
-                <p className="text-[var(--color-text-secondary)] leading-relaxed">
-                  Os dados deste formulário são usados para processar e organizar sua inscrição no Retiro UAMA.
-                  Saiba mais no <a href="/privacidade" target="_blank" rel="noreferrer" className="font-semibold text-[var(--color-primary)] underline underline-offset-2">Aviso de Privacidade</a>.
-                </p>
-              </div>
-
               {errorMessage && (
                 <div role="alert" aria-live="polite" className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 flex items-start gap-3 text-xs sm:text-sm">
                   <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
@@ -355,6 +420,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
                   maxLength={120}
                   autoComplete="name"
                   value={fullName}
+                  aria-invalid={touched.fullName && !isNameValid}
                   onChange={(e) => {
                     setFullName(e.target.value);
                     clearError();
@@ -392,6 +458,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
                     type="date"
                     required
                     value={birthDate}
+                    aria-invalid={touched.birthDate && !isBirthDateValid}
                     onChange={(e) => {
                       setBirthDate(e.target.value);
                       clearError();
@@ -422,6 +489,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
                     inputMode="tel"
                     maxLength={15}
                     value={phone}
+                    aria-invalid={touched.phone && !isPhoneValid}
                     onChange={handlePhoneChange}
                     onBlur={() =>
                       setTouched((prev) => ({ ...prev, phone: true }))
@@ -452,6 +520,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
                   maxLength={250}
                   autoComplete="street-address"
                   value={address}
+                  aria-invalid={touched.address && !isAddressValid}
                   onChange={(e) => {
                     setAddress(e.target.value);
                     clearError();
@@ -485,6 +554,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
                     maxLength={30}
                     autoComplete="off"
                     value={rg}
+                    aria-invalid={touched.rg && !isRgValid}
                     onChange={(e) => {
                       setRg(e.target.value);
                       clearError();
@@ -517,6 +587,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
                     maxLength={14}
                     autoComplete="off"
                     value={cpf}
+                    aria-invalid={touched.cpf && !isCpfValid}
                     onChange={handleCpfChange}
                     onBlur={() =>
                       setTouched((prev) => ({ ...prev, cpf: true }))
@@ -650,7 +721,10 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
               </div>
 
               {/* Botão */}
-              <div>
+              <div className="space-y-2">
+                <p className="text-xs text-[var(--color-text-secondary)] text-center">
+                  Revise os dados antes de enviar. Após o envio, aguarde a confirmação da coordenação.
+                </p>
                 <button
                   type="submit"
                   disabled={isLoading}
