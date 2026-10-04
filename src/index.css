@@ -104,3 +104,165 @@ img {
   height: auto;
 }
 
+
+/* =========================================================
+   UAMA — FASE PRINCIPAL 1: LEGIBILIDADE E CONTRASTE
+   Objetivo: leitura confortável no celular e desktop sem
+   descaracterizar a identidade visual configurável do site.
+   ========================================================= */
+
+@layer base {
+  :root {
+    /* Secondary text was too light for long-form reading. */
+    --color-text-secondary: #57534e;
+  }
+
+  body {
+    font-size: 16px;
+    line-height: 1.65;
+    font-weight: 450;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  p,
+  li,
+  label,
+  input,
+  select,
+  textarea,
+  button {
+    line-height: 1.55;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-serif-display {
+    color: var(--color-text-title);
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+
+  h2,
+  h3 {
+    line-height: 1.2;
+  }
+
+  label {
+    color: var(--color-text-main);
+    font-weight: 650;
+  }
+
+  input,
+  select,
+  textarea {
+    color: var(--color-text-main);
+    font-weight: 500;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #78716c;
+    opacity: 1;
+  }
+
+  button,
+  a {
+    text-underline-offset: 0.18em;
+  }
+
+  button {
+    font-weight: 650;
+  }
+}
+
+/* Public experience: tiny editorial text is raised to a safer reading size. */
+main .text-xs,
+footer .text-xs,
+header .text-xs {
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+}
+
+main .text-\[10px\],
+main .text-\[11px\],
+footer .text-\[10px\],
+footer .text-\[11px\],
+header .text-\[10px\],
+header .text-\[11px\] {
+  font-size: 0.8125rem !important;
+  line-height: 1.45 !important;
+}
+
+/* Secondary copy keeps hierarchy while meeting a stronger contrast baseline. */
+main .text-\[var\(--color-text-secondary\)\],
+footer .text-\[var\(--color-text-secondary\)\],
+header .text-\[var\(--color-text-secondary\)\] {
+  font-weight: 500;
+}
+
+/* Stronger reading rhythm for longer paragraphs and form helper text. */
+main p {
+  max-width: 72ch;
+}
+
+main section p,
+main section li {
+  line-height: 1.7;
+}
+
+/* Buttons and interactive controls should remain readable in bright light. */
+main button,
+header button,
+footer button {
+  letter-spacing: 0.005em;
+}
+
+/* Better focus visibility for keyboard users. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-form-focus) 78%, white);
+  outline-offset: 3px;
+}
+
+/* Mobile readability: preserve hierarchy without microscopic captions. */
+@media (max-width: 767px) {
+  body {
+    font-size: 16px;
+    line-height: 1.68;
+  }
+
+  main h1 {
+    line-height: 1.12 !important;
+  }
+
+  main h2,
+  main h3 {
+    line-height: 1.18 !important;
+  }
+
+  main p,
+  main li {
+    line-height: 1.68;
+  }
+
+  main button,
+  header button {
+    min-height: 46px;
+  }
+}
+
+/* Accessibility: respect users that request higher contrast. */
+@media (prefers-contrast: more) {
+  :root {
+    --color-text-main: #1c1917;
+    --color-text-secondary: #44403c;
+    --color-border: #a8a29e;
+    --color-card-border: #a8a29e;
+  }
+}
