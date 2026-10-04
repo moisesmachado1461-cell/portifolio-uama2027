@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Download, X, Share2 } from 'lucide-react';
+import { Download, X, Share2, ShieldCheck } from 'lucide-react';
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -18,6 +18,7 @@ export function PWAInstallPrompt() {
   const [dismissed, setDismissed] = useState(false);
   const [installed, setInstalled] = useState(false);
 
+  const isAdminArea = window.location.pathname.startsWith('/admin');
   const isIOS = useMemo(() => {
     const ua = navigator.userAgent.toLowerCase();
     return /iphone|ipad|ipod/.test(ua);
@@ -46,9 +47,6 @@ export function PWAInstallPrompt() {
   }, []);
 
   if (installed || dismissed) return null;
-
-  // On desktop/Android, only show when the browser confirms the app is installable.
-  // On iOS, show the manual Safari instruction because beforeinstallprompt is not supported.
   if (!installEvent && !isIOS) return null;
 
   const install = async () => {
@@ -61,16 +59,25 @@ export function PWAInstallPrompt() {
     setInstallEvent(null);
   };
 
+  const title = isAdminArea ? 'Instalar UAMA Admin' : 'Instalar aplicativo UAMA';
+  const description = isAdminArea
+    ? 'Instale a área administrativa com um ícone separado do aplicativo público.'
+    : 'Instale o UAMA na tela inicial e abra como um aplicativo.';
+
   return (
-    <div className="fixed bottom-20 sm:bottom-5 left-3 right-3 sm:left-auto sm:right-5 sm:w-[360px] z-[100]">
+    <div className="fixed bottom-20 sm:bottom-5 left-3 right-3 sm:left-auto sm:right-5 sm:w-[370px] z-[100]">
       <div className="rounded-2xl border border-black/10 bg-white/95 backdrop-blur-xl shadow-2xl p-4 text-stone-900">
         <div className="flex items-start gap-3">
-          <div className="w-11 h-11 rounded-xl bg-[#6B1F36] text-white flex items-center justify-center shrink-0 font-bold">
-            U
+          <div
+            className={`w-11 h-11 rounded-xl text-white flex items-center justify-center shrink-0 font-bold ${
+              isAdminArea ? 'bg-[#24161B]' : 'bg-[#6B1F36]'
+            }`}
+          >
+            {isAdminArea ? <ShieldCheck className="w-6 h-6" aria-hidden="true" /> : 'U'}
           </div>
 
           <div className="min-w-0 flex-1">
-            <p className="font-bold text-base">Instalar aplicativo UAMA</p>
+            <p className="font-bold text-base">{title}</p>
 
             {isIOS && !installEvent ? (
               <p className="mt-1 text-sm leading-relaxed text-stone-600">
@@ -78,19 +85,21 @@ export function PWAInstallPrompt() {
                 <strong> Compartilhar</strong> e depois em <strong>Adicionar à Tela de Início</strong>.
               </p>
             ) : (
-              <p className="mt-1 text-sm leading-relaxed text-stone-600">
-                Instale o UAMA na tela inicial e abra como um aplicativo.
-              </p>
+              <p className="mt-1 text-sm leading-relaxed text-stone-600">{description}</p>
             )}
 
             {!isIOS || installEvent ? (
               <button
                 type="button"
                 onClick={install}
-                className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl bg-[#6B1F36] px-4 py-2.5 text-sm font-bold text-white hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-[#6B1F36]/40"
+                className={`mt-3 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white hover:opacity-95 focus:outline-none focus:ring-2 ${
+                  isAdminArea
+                    ? 'bg-[#24161B] focus:ring-[#24161B]/40'
+                    : 'bg-[#6B1F36] focus:ring-[#6B1F36]/40'
+                }`}
               >
                 <Download className="w-4 h-4" aria-hidden="true" />
-                Instalar app
+                {isAdminArea ? 'Instalar Admin' : 'Instalar app'}
               </button>
             ) : null}
           </div>
